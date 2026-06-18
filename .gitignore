@@ -1,0 +1,9 @@
+# R workspace / history (large binary, regenerable)
+*.RData
+.RData
+*.Rhistory
+.Rhistory
+
+# OS / misc
+.DS_Store
+Thumbs.db
