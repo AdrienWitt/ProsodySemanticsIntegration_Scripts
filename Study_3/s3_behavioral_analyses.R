@@ -133,6 +133,45 @@ ggarrange(p_task, p_run, p_valid,
 ggsave("plots/supplementary_RT_validation.jpg", width = 12, height = 10)
 
 # ============================================================
+# STIMULUS DURATION BALANCE CHECK ACROSS CONDITIONS
+# ------------------------------------------------------------
+# Reports M (SD), F, p and eta^2 for the audio durations of the
+# statements and contexts, compared Literal vs Non-literal (and
+# across context valence). Self-contained / base R so it can be
+# run on its own; run from the Study_3 directory.
+# Literality is read from Condition_name = C{P/N}_S{P/N}{pros}
+# (e.g. "CP_SPpos"): literal when context valence == statement valence.
+# ============================================================
+local({
+  files <- Sys.glob("data/*/Resultfile*.txt")
+  sb <- do.call(rbind, lapply(files, function(x) read.table(x, header = TRUE)))
+  sb <- subset(sb, !(subID %in% c(11, 13, 15, 17, 22)))   # drop left-handers
+
+  cn <- as.character(sb$Condition_name)
+  sb$literality  <- ifelse(substr(cn, 2, 2) == substr(cn, 5, 5), "Literal", "Non-literal")
+  sb$ctx_valence <- ifelse(substr(cn, 2, 2) == "P", "Positive", "Negative")
+
+  bal <- function(dv, grp, label, gname) {
+    fit <- aov(dv ~ factor(grp)); a <- summary(fit)[[1]]; ss <- a[["Sum Sq"]]
+    cat(sprintf("\n%s by %s:\n", label, gname))
+    print(tapply(dv, grp, function(x) sprintf("%.3f (%.3f)", mean(x), sd(x))))
+    cat(sprintf("  F(%d,%d) = %.2f, p = %.3f, eta^2 = %.3f\n",
+        a[["Df"]][1], a[["Df"]][2], a[["F value"]][1], a[["Pr(>F)"]][1], ss[1] / sum(ss)))
+  }
+
+  # Unique audio stimuli (statement text x voice x prosody; context x voice)
+  stmt <- unique(sb[, c("literality", "ctx_valence", "Statement", "Voice_Statement", "Time_Statement")])
+  cat("Unique statement audios:", nrow(stmt), "\n")
+  bal(stmt$Time_Statement, stmt$literality,  "Statement duration (s)", "literality")
+  bal(stmt$Time_Statement, stmt$ctx_valence, "Statement duration (s)", "context valence")
+
+  ctxt <- unique(sb[, c("literality", "ctx_valence", "Context", "Voice_Context", "Time_Context")])
+  cat("\nUnique context audios:", nrow(ctxt), "\n")
+  bal(ctxt$Time_Context, ctxt$literality,  "Context duration (s)", "literality")
+  bal(ctxt$Time_Context, ctxt$ctx_valence, "Context duration (s)", "context valence")
+})
+
+# ============================================================
 # FILTER VALID OBSERVATIONS AND ADD VARIABLES
 # ============================================================
 
